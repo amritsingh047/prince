@@ -1,0 +1,112 @@
+#"Which ten countries have contributed the most titles to the Netflix library, and what are their respective counts?"
+# 1. Import necessary libraries
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Set visualization style and color palette
+sns.set_style('whitegrid')
+plt.rcParams['figure.figsize'] = (12, 7)
+netflix_red = '#E50914' # Official Netflix Red for consistency
+
+# --- 2. Data Loading ---
+# NOTE: Replace 'netflix_titles.csv' with your actual file path or URL.
+try:
+    df = pd.read_csv('netflix_titles.csv')
+    print("Netflix data successfully loaded!")
+except FileNotFoundError:
+    print("Error: Make sure 'netflix_titles.csv' is in the correct directory.")
+    exit()
+
+# Initial Data Exploration
+print("\n--- Initial Data Info ---")
+print(df.head())
+print(df.info())
+
+
+# --- 3. Data Cleaning and Preprocessing ---
+
+# 3.1. Handling Missing Values
+# Fill missing 'director' and 'cast' with 'Unknown'
+df['director'] = df['director'].fillna('Unknown')
+df['cast'] = df['cast'].fillna('Unknown')
+
+# Fill missing 'country' with the mode (most frequent value)
+df['country'] = df['country'].fillna(df['country'].mode()[0])
+
+# Drop any rows where the 'date_added' or 'rating' are still missing
+df.dropna(subset=['date_added', 'rating'], inplace=True)
+
+
+# 3.2. Data Type Conversion & Feature Engineering
+# Convert 'date_added' to datetime object
+df['date_added'] = pd.to_datetime(df['date_added'])
+
+# Extract Year and Month added
+df['added_year'] = df['date_added'].dt.year
+df['added_month'] = df['date_added'].dt.strftime('%B')
+
+
+# --- 4. Exploratory Data Analysis (EDA) & Insights ---
+
+# 4.1. Content Type Distribution
+print("\n--- 4.1 Content Type Distribution ---")
+content_distribution = df['type'].value_counts()
+print(content_distribution)
+
+plt.figure(figsize=(8, 8))
+plt.pie(content_distribution, labels=content_distribution.index, autopct='%1.1f%%',
+        startangle=90, colors=[netflix_red, 'gray'])
+plt.title('Percentage Distribution of Movies vs. TV Shows')
+plt.show()
+
+# 4.2. Top 10 Producing Countries
+# Split the countries column (as content often has multiple) and count
+country_data = df['country'].str.split(',', expand=True).stack()
+country_data = country_data.str.strip()
+top_countries = country_data.value_counts().head(10)
+
+print("\n--- 4.2 Top 10 Content Producing Countries ---")
+print(top_countries)
+
+plt.figure(figsize=(12, 6))
+sns.barplot(x=top_countries.index, y=top_countries.values, palette=sns.light_palette(netflix_red, n_colors=10, reverse=True))
+plt.title('Top 10 Countries by Content Count')
+plt.xlabel('Country')
+plt.ylabel('Number of Titles')
+plt.xticks(rotation=45, ha='right')
+plt.tight_layout()
+plt.show()
+
+# 4.3. Content Growth Over Time
+# Count the number of titles added per year
+titles_per_year = df['added_year'].value_counts().sort_index()
+
+print("\n--- 4.3 Content Added Per Year ---")
+print(titles_per_year.tail())
+
+plt.figure(figsize=(14, 7))
+titles_per_year.plot(kind='line', marker='o', color=netflix_red, linewidth=3)
+plt.title('Netflix Content Addition Trend Over Years ')
+plt.xlabel('Year Added')
+plt.ylabel('Number of Titles Added')
+plt.grid(True)
+plt.show()
+
+# 4.4. Top 10 Genres/Categories
+# Use the 'listed_in' column (genres/categories)
+genre_data = df['listed_in'].str.split(',', expand=True).stack()
+genre_data = genre_data.str.strip()
+top_genres = genre_data.value_counts().head(10)
+
+print("\n--- 4.4 Top 10 Genres/Categories ---")
+print(top_genres)
+
+plt.figure(figsize=(12, 6))
+sns.barplot(y=top_genres.index, x=top_genres.values, palette='plasma')
+plt.title('Top 10 Most Common Genres on Netflix')
+plt.xlabel('Number of Titles')
+plt.ylabel('Genre')
+plt.tight_layout()
+plt.show()
